@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUUPI - Мультиплеерная Игра</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="loginScreen" class="screen active">
+            <div class="login-form">
+                <h1>PUUPI</h1>
+                <p>Мультиплеерная арена</p>
+                <input type="text" id="usernameInput" placeholder="Введите имя (до 14 символов)" maxlength="14">
+                <button id="playButton">Играть</button>
+                <div id="errorMessage" class="error"></div>
+                <div class="game-info">
+                    <p>⚡ Управление джойстиком</p>
+                    <p>💥 Атака ближнего боя</p>
+                    <p>🚀 Ускорение каждые 10 сек</p>
+                    <p>💬 Чат с игроками</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameScreen" class="screen">
+            <canvas id="gameCanvas"></canvas>
+            
+            <div id="uiOverlay">
+                <div id="playerInfo">
+                    <div id="healthBar">
+                        <div id="healthFill"></div>
+                    </div>
+                    <div id="score">Очки: 0</div>
+                    <div id="playerName"></div>
+                </div>
+                
+                <div id="controls">
+                    <div id="joystickContainer">
+                        <div id="joystickBase"></div>
+                        <div id="joystickHandle"></div>
+                    </div>
+                    <div id="actionButtons">
+                        <button id="boostButton" class="action-btn">
+                            <span class="boost-icon">🚀</span>
+                            <div class="cooldown-overlay"></div>
+                        </button>
+                        <button id="attackButton" class="action-btn">
+                            <span class="attack-icon">💥</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="chatContainer">
+                    <div id="chatHeader">
+                        <span>Чат комнаты</span>
+                        <button id="toggleChat">−</button>
+                    </div>
+                    <div id="chatMessages"></div>
+                    <div id="chatInputContainer">
+                        <input type="text" id="chatInput" placeholder="Написать сообщение..." maxlength="100">
+                        <button id="sendMessage">➤</button>
+                    </div>
+                </div>
+                
+                <div id="roomInfo">
+                    <span>Комната: <span id="roomNumber">1</span></span>
+                    <span>Игроков: <span id="playerCount">1</span>/12</span>
+                </div>
+                
+                <div id="moderatorPanel" class="hidden">
+                    <div class="moderator-header">Панель модератора</div>
+                    <button id="clearChat" class="mod-btn">🧹 Очистить чат</button>
+                    <button id="deleteRoom" class="mod-btn">🗑️ Удалить комнату</button>
+                    <button id="switchRoom" class="mod-btn">🔄 Сменить комнату</button>
+                    <button id="kickPlayer" class="mod-btn">👢 Выбрать игрока</button>
+                </div>
+
+                <button id="leaveGame" class="leave-btn">Выйти</button>
+            </div>
+
+            <div id="playerList" class="hidden">
+                <div class="player-list-header">Игроки в комнате</div>
+                <div id="playerListContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modals">
+        <div id="kickModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Выберите игрока для кика</h3>
+                <div id="kickPlayerList"></div>
+                <button id="cancelKick">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
