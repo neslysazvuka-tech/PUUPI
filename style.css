@@ -223,6 +223,7 @@ body {
     padding: 15px;
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: calc(100vw - 40px);
 }
 
 #healthBar {
@@ -275,21 +276,24 @@ body {
     font-weight: 500;
 }
 
-/* Управление */
+/* Управление - ИСПРАВЛЕНО РАСПОЛОЖЕНИЕ */
 #controls {
     position: absolute;
     bottom: 25px;
-    width: 100%;
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: space-between;
     padding: 0 25px;
     align-items: flex-end;
+    gap: 20px;
 }
 
 #joystickContainer {
     position: relative;
     width: 130px;
     height: 130px;
+    flex-shrink: 0;
 }
 
 #joystickBase {
@@ -319,6 +323,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    flex-shrink: 0;
 }
 
 .action-btn {
@@ -338,6 +343,7 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
 }
 
 .action-btn:active {
@@ -372,7 +378,7 @@ body {
     opacity: 1;
 }
 
-/* Чат */
+/* Чат - ИСПРАВЛЕНО СВОРАЧИВАНИЕ */
 #chatContainer {
     position: absolute;
     top: 20px;
@@ -386,7 +392,22 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    transition: height 0.3s ease;
+    transition: all 0.3s ease;
+    max-width: calc(100vw - 40px);
+}
+
+#chatContainer.chat-collapsed {
+    height: 45px;
+    width: 200px;
+}
+
+#chatContainer.chat-collapsed #chatMessages,
+#chatContainer.chat-collapsed #chatInputContainer {
+    display: none;
+}
+
+#chatContainer.chat-collapsed #chatHeader {
+    border-bottom: none;
 }
 
 #chatHeader {
@@ -397,6 +418,7 @@ body {
     align-items: center;
     font-weight: 500;
     font-size: 0.9rem;
+    flex-shrink: 0;
 }
 
 #toggleChat {
@@ -411,6 +433,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+#chatContainer.chat-collapsed #toggleChat {
+    transform: rotate(180deg);
 }
 
 #chatMessages {
@@ -420,6 +447,7 @@ body {
     font-size: 0.85rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    min-height: 0;
 }
 
 #chatMessages::-webkit-scrollbar {
@@ -482,6 +510,7 @@ body {
     padding: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.2);
     gap: 8px;
+    flex-shrink: 0;
 }
 
 #chatInput {
@@ -494,6 +523,7 @@ body {
     font-size: 0.85rem;
     outline: none;
     transition: all 0.3s ease;
+    min-width: 0;
 }
 
 #chatInput:focus {
@@ -515,6 +545,7 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     min-width: 50px;
+    flex-shrink: 0;
 }
 
 #sendMessage:hover {
@@ -540,6 +571,8 @@ body {
     display: flex;
     gap: 20px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    max-width: 90vw;
 }
 
 #roomInfo span {
@@ -562,6 +595,7 @@ body {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 215, 0, 0.3);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: calc(100vw - 40px);
 }
 
 .moderator-header {
@@ -584,6 +618,7 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: left;
+    white-space: nowrap;
 }
 
 .mod-btn:hover {
@@ -608,6 +643,8 @@ body {
     font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    max-width: calc(100vw - 40px);
 }
 
 .leave-btn:hover {
@@ -629,6 +666,7 @@ body {
     max-height: 300px;
     overflow-y: auto;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: calc(100vw - 40px);
 }
 
 .player-list-header {
@@ -737,15 +775,6 @@ body {
     display: none !important;
 }
 
-.chat-collapsed {
-    height: 45px !important;
-}
-
-.chat-collapsed #chatMessages,
-.chat-collapsed #chatInputContainer {
-    display: none;
-}
-
 /* Адаптивность */
 @media (max-width: 768px) {
     .login-form {
@@ -762,6 +791,10 @@ body {
         height: 300px;
         right: 10px;
         top: 10px;
+    }
+    
+    #chatContainer.chat-collapsed {
+        width: 150px;
     }
     
     #joystickContainer {
@@ -802,6 +835,12 @@ body {
         right: 10px;
         bottom: 10px;
     }
+    
+    #playerList {
+        left: 10px;
+        top: 70px;
+        width: 180px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -810,8 +849,13 @@ body {
         height: 280px;
     }
     
+    #chatContainer.chat-collapsed {
+        width: 120px;
+    }
+    
     #controls {
         padding: 0 15px;
+        gap: 10px;
     }
     
     .action-btn {
@@ -829,6 +873,16 @@ body {
         flex-direction: column;
         gap: 5px;
         padding: 8px 12px;
+    }
+    
+    #moderatorPanel {
+        bottom: 120px;
+        padding: 12px;
+    }
+    
+    .mod-btn {
+        font-size: 0.7rem;
+        padding: 6px 10px;
     }
 }
 
@@ -866,4 +920,36 @@ body {
 @keyframes cooldownSpin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* Защита от выхода за пределы экрана */
+#controls {
+    /* Уже добавлено выше */
+}
+
+#joystickContainer,
+#actionButtons {
+    /* Уже добавлено выше */
+}
+
+/* Гарантия что элементы не выйдут за экран на маленьких устройствах */
+@media (max-height: 600px) {
+    #controls {
+        bottom: 15px;
+    }
+    
+    #joystickContainer {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .action-btn {
+        width: 55px;
+        height: 55px;
+        font-size: 1.1rem;
+    }
+    
+    #chatContainer {
+        height: 250px;
+    }
 }
