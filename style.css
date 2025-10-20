@@ -276,10 +276,10 @@ body {
     font-weight: 500;
 }
 
-/* Управление - ИСПРАВЛЕНО РАСПОЛОЖЕНИЕ (ДЖОЙСТИК ВЫШЕ НА 4см, КНОПКИ ВЫШЕ НА 2см) */
+/* Управление - ПОДНЯТО ЕЩЁ ВЫШЕ (ДЖОЙСТИК +8см, КНОПКИ +6см ОТНОСИТЕЛЬНО ИСХОДНОГО) */
 #controls {
     position: absolute;
-    bottom: 65px; /* Было 25px - поднято на 4см */
+    bottom: 105px; /* Было 25px → 65px → теперь 105px (+8см от исходного) */
     left: 0;
     right: 0;
     display: flex;
@@ -324,7 +324,7 @@ body {
     flex-direction: column;
     gap: 20px;
     flex-shrink: 0;
-    margin-bottom: 20px; /* Поднято на 2см */
+    margin-bottom: 40px; /* Было 0px → 20px → теперь 40px (+6см от исходного) */
 }
 
 .action-btn {
@@ -345,6 +345,9 @@ body {
     justify-content: center;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     flex-shrink: 0;
+    /* Разрешаем множественные касания */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .action-btn:active {
@@ -585,7 +588,7 @@ body {
 /* Панель модератора */
 #moderatorPanel {
     position: absolute;
-    bottom: 200px; /* Поднято из-за сдвига элементов управления */
+    bottom: 240px; /* Поднято из-за сдвига элементов управления */
     right: 20px;
     display: flex;
     flex-direction: column;
@@ -799,7 +802,7 @@ body {
     }
     
     #controls {
-        bottom: 60px; /* Адаптировано для мобильных */
+        bottom: 100px; /* Адаптировано для мобильных */
     }
     
     #joystickContainer {
@@ -833,7 +836,7 @@ body {
     
     #moderatorPanel {
         right: 10px;
-        bottom: 180px; /* Адаптировано */
+        bottom: 220px; /* Адаптировано */
     }
     
     .leave-btn {
@@ -861,7 +864,7 @@ body {
     #controls {
         padding: 0 15px;
         gap: 10px;
-        bottom: 55px; /* Адаптировано для маленьких экранов */
+        bottom: 95px; /* Адаптировано для маленьких экранов */
     }
     
     .action-btn {
@@ -882,7 +885,7 @@ body {
     }
     
     #moderatorPanel {
-        bottom: 160px; /* Адаптировано */
+        bottom: 200px; /* Адаптировано */
         padding: 12px;
     }
     
@@ -941,7 +944,7 @@ body {
 /* Гарантия что элементы не выйдут за экран на маленьких устройствах */
 @media (max-height: 600px) {
     #controls {
-        bottom: 50px; /* Адаптировано для низких экранов */
+        bottom: 90px; /* Адаптировано для низких экранов */
     }
     
     #joystickContainer {
@@ -960,14 +963,14 @@ body {
     }
     
     #moderatorPanel {
-        bottom: 150px; /* Адаптировано */
+        bottom: 190px; /* Адаптировано */
     }
 }
 
 /* Очень маленькие экраны */
 @media (max-height: 500px) {
     #controls {
-        bottom: 40px;
+        bottom: 80px;
     }
     
     #joystickContainer {
@@ -982,7 +985,7 @@ body {
     }
     
     #moderatorPanel {
-        bottom: 140px;
+        bottom: 180px;
         padding: 10px;
     }
     
@@ -990,4 +993,21 @@ body {
         font-size: 0.65rem;
         padding: 5px 8px;
     }
+}
+
+/* Стили для множественных касаний */
+#joystickContainer {
+    touch-action: none;
+}
+
+#actionButtons {
+    touch-action: manipulation;
+}
+
+.action-btn {
+    /* Улучшенная поддержка множественных касаний */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
