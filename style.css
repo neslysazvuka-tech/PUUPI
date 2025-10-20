@@ -1,0 +1,869 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #ff0080;
+    --secondary-color: #00ffcc;
+    --dark-bg: #0a0a0a;
+    --darker-bg: #050505;
+    --card-bg: rgba(255, 255, 255, 0.1);
+    --text-color: #ffffff;
+    --moderator-gold: #FFD700;
+    --health-red: #ff4757;
+    --health-orange: #ffa502;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background: var(--dark-bg);
+    color: var(--text-color);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    touch-action: none;
+    user-select: none;
+}
+
+#gameContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.screen.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Экран входа */
+#loginScreen {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    animation: backgroundShift 10s ease-in-out infinite;
+}
+
+@keyframes backgroundShift {
+    0%, 100% { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    50% { background: linear-gradient(135deg, #16213e 0%, #0f3460 100%); }
+}
+
+.login-form {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    padding: 2.5rem;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 450px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: formEntrance 0.8s ease-out;
+}
+
+@keyframes formEntrance {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.login-form h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(255, 0, 128, 0.5);
+    letter-spacing: 2px;
+}
+
+.login-form p {
+    margin-bottom: 2rem;
+    color: #aaa;
+    font-size: 1.2rem;
+    font-weight: 300;
+}
+
+#usernameInput {
+    width: 100%;
+    padding: 15px 20px;
+    margin-bottom: 1.5rem;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 1.1rem;
+    outline: none;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+#usernameInput:focus {
+    border-color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(255, 0, 128, 0.3);
+}
+
+#usernameInput::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+#playButton {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#playButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+#playButton:hover::before {
+    left: 100%;
+}
+
+#playButton:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(255, 0, 128, 0.4);
+}
+
+#playButton:active {
+    transform: translateY(-1px);
+}
+
+.game-info {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.game-info p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.error {
+    color: var(--health-red);
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    min-height: 1.2rem;
+    font-weight: 500;
+}
+
+/* Игровой экран */
+#gameScreen {
+    background: var(--darker-bg);
+}
+
+#gameCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: none;
+}
+
+#uiOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#uiOverlay > * {
+    pointer-events: auto;
+}
+
+/* Информация игрока */
+#playerInfo {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 220px;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    padding: 15px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#healthBar {
+    width: 100%;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+#healthFill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--health-red), var(--health-orange));
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#healthFill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: healthShine 3s infinite;
+}
+
+@keyframes healthShine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+#score {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--secondary-color);
+    text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+    margin-bottom: 5px;
+}
+
+#playerName {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+/* Управление */
+#controls {
+    position: absolute;
+    bottom: 25px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 25px;
+    align-items: flex-end;
+}
+
+#joystickContainer {
+    position: relative;
+    width: 130px;
+    height: 130px;
+}
+
+#joystickBase {
+    width: 100%;
+    height: 100%;
+    background: var(--card-bg);
+    border-radius: 50%;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+#joystickHandle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 55px;
+    height: 55px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+#actionButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.action-btn {
+    position: relative;
+    padding: 0;
+    background: var(--card-bg);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+    width: 75px;
+    height: 75px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.92);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.action-btn:disabled:active {
+    transform: none;
+}
+
+.cooldown-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.action-btn:disabled .cooldown-overlay {
+    opacity: 1;
+}
+
+/* Чат */
+#chatContainer {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    height: 350px;
+    background: var(--card-bg);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transition: height 0.3s ease;
+}
+
+#chatHeader {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+#toggleChat {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#chatMessages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+#chatMessages::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chatMessages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#chatMessages::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.chat-message {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    word-break: break-word;
+    animation: messageAppear 0.3s ease;
+    border-left: 3px solid transparent;
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-message.moderator {
+    background: rgba(255, 215, 0, 0.15);
+    border-left-color: var(--moderator-gold);
+}
+
+.chat-message.system {
+    background: rgba(0, 255, 204, 0.15);
+    border-left-color: var(--secondary-color);
+    font-style: italic;
+}
+
+.chat-message.player-join {
+    background: rgba(0, 255, 0, 0.1);
+    border-left-color: #00ff00;
+}
+
+.chat-message.player-left {
+    background: rgba(255, 0, 0, 0.1);
+    border-left-color: #ff0000;
+}
+
+#chatInputContainer {
+    display: flex;
+    padding: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    gap: 8px;
+}
+
+#chatInput {
+    flex: 1;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#chatInput:focus {
+    border-color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+#chatInput::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+#sendMessage {
+    padding: 10px 15px;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 50px;
+}
+
+#sendMessage:hover {
+    transform: scale(1.05);
+}
+
+#sendMessage:active {
+    transform: scale(0.95);
+}
+
+/* Информация о комнате */
+#roomInfo {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-bg);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    gap: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+#roomInfo span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Панель модератора */
+#moderatorPanel {
+    position: absolute;
+    bottom: 160px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.moderator-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--moderator-gold);
+    margin-bottom: 8px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+    padding-bottom: 5px;
+}
+
+.mod-btn {
+    padding: 8px 12px;
+    background: rgba(255, 215, 0, 0.15);
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    border-radius: 8px;
+    color: var(--moderator-gold);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.mod-btn:hover {
+    background: rgba(255, 215, 0, 0.25);
+    transform: translateY(-1px);
+}
+
+.mod-btn:active {
+    transform: translateY(0);
+}
+
+/* Кнопка выхода */
+.leave-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 15px;
+    background: rgba(255, 71, 87, 0.2);
+    border: 1px solid rgba(255, 71, 87, 0.5);
+    border-radius: 8px;
+    color: var(--health-red);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.leave-btn:hover {
+    background: rgba(255, 71, 87, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Список игроков */
+#playerList {
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 15px;
+    width: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.player-list-header {
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.9rem;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 0.8rem;
+}
+
+.player-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.player-moderator .player-color {
+    background: var(--moderator-gold) !important;
+}
+
+/* Модальные окна */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+}
+
+.modal-content h3 {
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.modal-content button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+#cancelKick {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#cancelKick:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.kick-player-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    margin: 5px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.kick-player-item:hover {
+    background: rgba(255, 71, 87, 0.2);
+}
+
+.kick-player-color {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.chat-collapsed {
+    height: 45px !important;
+}
+
+.chat-collapsed #chatMessages,
+.chat-collapsed #chatInputContainer {
+    display: none;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .login-form {
+        padding: 2rem;
+        margin: 0 15px;
+    }
+    
+    .login-form h1 {
+        font-size: 3rem;
+    }
+    
+    #chatContainer {
+        width: 280px;
+        height: 300px;
+        right: 10px;
+        top: 10px;
+    }
+    
+    #joystickContainer {
+        width: 110px;
+        height: 110px;
+    }
+    
+    #joystickHandle {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .action-btn {
+        width: 65px;
+        height: 65px;
+        font-size: 1.3rem;
+    }
+    
+    #playerInfo {
+        width: 180px;
+        left: 10px;
+        top: 10px;
+    }
+    
+    #roomInfo {
+        top: 10px;
+        font-size: 0.8rem;
+        padding: 8px 15px;
+        gap: 15px;
+    }
+    
+    #moderatorPanel {
+        right: 10px;
+        bottom: 140px;
+    }
+    
+    .leave-btn {
+        right: 10px;
+        bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    #chatContainer {
+        width: 250px;
+        height: 280px;
+    }
+    
+    #controls {
+        padding: 0 15px;
+    }
+    
+    .action-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 1.2rem;
+    }
+    
+    #playerInfo {
+        width: 160px;
+        padding: 12px;
+    }
+    
+    #roomInfo {
+        flex-direction: column;
+        gap: 5px;
+        padding: 8px 12px;
+    }
+}
+
+/* Анимации */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.boost-active {
+    animation: pulse 0.5s infinite;
+}
+
+.attack-animation {
+    animation: pulse 0.2s 3;
+}
+
+/* Состояния кнопок */
+.action-btn.cooldown {
+    position: relative;
+}
+
+.action-btn.cooldown::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.3));
+    border-radius: 50%;
+    animation: cooldownSpin 10s linear;
+}
+
+@keyframes cooldownSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
