@@ -20,7 +20,10 @@ const gameState = {
     isBoosting: false,
     lastActivity: Date.now(),
     gameLoopId: null,
-    isChatCollapsed: false
+    isChatCollapsed: false,
+    // Новые состояния для множественных касаний
+    activeTouches: new Map(),
+    isAttacking: false
 };
 
 // Элементы DOM
@@ -64,7 +67,8 @@ const joystick = {
     active: false,
     position: { x: 0, y: 0 },
     direction: { x: 0, y: 0 },
-    baseRect: null
+    baseRect: null,
+    touchId: null // Для отслеживания конкретного касания джойстика
 };
 
 // Размеры холста
@@ -134,9 +138,41 @@ function setupEventListeners() {
     });
     elements.toggleChat.addEventListener('click', toggleChat);
     
-    // Действия
-    elements.boostButton.addEventListener('click', activateBoost);
-    elements.attackButton.addEventListener('click', performAttack);
+    // Действия - ОБНОВЛЕННЫЕ ОБРАБОТЧИКИ ДЛЯ МНОЖЕСТВЕННЫХ КАСАНИЙ
+    elements.boostButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        activateBoost();
+    }, { passive: false });
+    
+    elements.boostButton.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        activateBoost();
+    });
+    
+    elements.attackButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startAttack();
+    }, { passive: false });
+    
+    elements.attackButton.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startAttack();
+    });
+    
+    elements.attackButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        stopAttack();
+    }, { passive: false });
+    
+    elements.attackButton.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        stopAttack();
+    });
+    
+    elements.attackButton.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        stopAttack();
+    }, { passive: false });
     
     // Модераторские кнопки
     elements.clearChat.addEventListener('click', clearChat);
@@ -148,7 +184,7 @@ function setupEventListeners() {
     // Выход из игры
     elements.leaveGame.addEventListener('click', leaveGame);
     
-    // Инициализация джойстика
+    // Инициализация джойстика с поддержкой множественных касаний
     initJoystick();
     
     // Глобальные обработчики активности
@@ -157,12 +193,11 @@ function setupEventListeners() {
     document.addEventListener('keydown', updateActivity);
 }
 
-// Переключение чата - ИСПРАВЛЕННАЯ ФУНКЦИЯ
+// Переключение чата
 function toggleChat() {
     gameState.isChatCollapsed = !gameState.isChatCollapsed;
     elements.chatContainer.classList.toggle('chat-collapsed', gameState.isChatCollapsed);
     
-    // Меняем иконку
     if (gameState.isChatCollapsed) {
         elements.toggleChat.textContent = '+';
     } else {
@@ -499,38 +534,65 @@ async function cleanupInactivePlayers() {
     }
 }
 
-// Инициализация джойстика
+// Инициализация джойстика с поддержкой множественных касаний
 function initJoystick() {
     let startX, startY;
     
+    // Обработчики для касаний (с поддержкой множественных)
     joystick.base.addEventListener('touchstart', handleTouchStart, { passive: false });
     joystick.base.addEventListener('touchmove', handleTouchMove, { passive: false });
     joystick.base.addEventListener('touchend', handleTouchEnd);
+    joystick.base.addEventListener('touchcancel', handleTouchEnd);
     
+    // Обработчики для мыши
     joystick.base.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     
     function handleTouchStart(e) {
         e.preventDefault();
-        const touch = e.touches[0];
-        startX = touch.clientX;
-        startY = touch.clientY;
-        joystick.baseRect = joystick.base.getBoundingClientRect();
-        joystick.active = true;
-        updateJoystickPosition(startX, startY);
+        // Используем первое касание для джойстика
+        if (joystick.touchId === null) {
+            const touch = e.touches[0];
+            joystick.touchId = touch.identifier;
+            startX = touch.clientX;
+            startY = touch.clientY;
+            joystick.baseRect = joystick.base.getBoundingClientRect();
+            joystick.active = true;
+            updateJoystickPosition(startX, startY);
+        }
     }
     
     function handleTouchMove(e) {
-        if (!joystick.active) return;
+        if (!joystick.active || joystick.touchId === null) return;
         e.preventDefault();
-        const touch = e.touches[0];
-        updateJoystickPosition(touch.clientX, touch.clientY);
+        
+        // Находим касание джойстика
+        for (let touch of e.touches) {
+            if (touch.identifier === joystick.touchId) {
+                updateJoystickPosition(touch.clientX, touch.clientY);
+                break;
+            }
+        }
     }
     
-    function handleTouchEnd() {
-        joystick.active = false;
-        resetJoystick();
+    function handleTouchEnd(e) {
+        if (joystick.touchId === null) return;
+        
+        // Проверяем, было ли это касание джойстика
+        let touchFound = false;
+        for (let touch of e.changedTouches) {
+            if (touch.identifier === joystick.touchId) {
+                touchFound = true;
+                break;
+            }
+        }
+        
+        if (touchFound) {
+            joystick.active = false;
+            joystick.touchId = null;
+            resetJoystick();
+        }
     }
     
     function handleMouseDown(e) {
@@ -583,7 +645,7 @@ function initJoystick() {
     }
 }
 
-// Активация ускорения
+// Активация ускорения - ОБНОВЛЕНА ДЛЯ МНОЖЕСТВЕННЫХ КАСАНИЙ
 function activateBoost() {
     const now = Date.now();
     if (now - gameState.lastBoostTime < gameState.boostCooldown) return;
@@ -606,14 +668,42 @@ function activateBoost() {
     updateActivity();
 }
 
-// Выполнение атаки
+// НАЧАЛО АТАКИ - новая функция для непрерывной атаки
+function startAttack() {
+    if (!gameState.currentPlayer || gameState.isAttacking) return;
+    
+    gameState.isAttacking = true;
+    elements.attackButton.classList.add('attack-animation');
+    
+    // Запускаем цикл атаки
+    performAttackCycle();
+    
+    updateActivity();
+}
+
+// ОКОНЧАНИЕ АТАКИ
+function stopAttack() {
+    gameState.isAttacking = false;
+    elements.attackButton.classList.remove('attack-animation');
+}
+
+// ЦИКЛ АТАКИ - непрерывная атака пока кнопка нажата
+function performAttackCycle() {
+    if (!gameState.isAttacking || !gameState.currentPlayer) return;
+    
+    performAttack();
+    
+    // Повторяем атаку каждые 500мс пока кнопка нажата
+    setTimeout(() => {
+        if (gameState.isAttacking) {
+            performAttackCycle();
+        }
+    }, 500);
+}
+
+// Выполнение атаки (основная логика)
 function performAttack() {
     if (!gameState.currentPlayer) return;
-    
-    elements.attackButton.classList.add('attack-animation');
-    setTimeout(() => {
-        elements.attackButton.classList.remove('attack-animation');
-    }, 600);
     
     const attackRadius = 60;
     let hitPlayer = null;
