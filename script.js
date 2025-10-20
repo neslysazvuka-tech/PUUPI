@@ -19,7 +19,8 @@ const gameState = {
     boostDuration: 3000,
     isBoosting: false,
     lastActivity: Date.now(),
-    gameLoopId: null
+    gameLoopId: null,
+    isChatCollapsed: false
 };
 
 // Элементы DOM
@@ -48,6 +49,7 @@ const elements = {
     kickPlayer: document.getElementById('kickPlayer'),
     leaveGame: document.getElementById('leaveGame'),
     toggleChat: document.getElementById('toggleChat'),
+    chatContainer: document.getElementById('chatContainer'),
     playerList: document.getElementById('playerList'),
     playerListContent: document.getElementById('playerListContent'),
     kickModal: document.getElementById('kickModal'),
@@ -77,7 +79,7 @@ async function init() {
     window.addEventListener('resize', resizeCanvas);
     
     // Проверка активности
-    setInterval(checkActivity, 30000); // Каждые 30 секунд
+    setInterval(checkActivity, 30000);
     
     // Автоматическая очистка каждую минуту
     setInterval(performAutoCleanup, 60000);
@@ -100,20 +102,17 @@ async function performAutoCleanup() {
         }
     } catch (error) {
         console.log('Auto cleanup not available, using client-side cleanup');
-        // Если функция не доступна, используем клиентскую очистку
         await clientSideCleanup();
     }
 }
 
 // Клиентская очистка (резервный вариант)
 async function clientSideCleanup() {
-    // Очистка устаревших сообщений
     await supabase
         .from('chat_messages')
         .delete()
         .lt('expires_at', new Date().toISOString());
     
-    // Очистка неактивных игроков
     await supabase
         .from('players')
         .update({ is_active: false })
@@ -158,6 +157,21 @@ function setupEventListeners() {
     document.addEventListener('keydown', updateActivity);
 }
 
+// Переключение чата - ИСПРАВЛЕННАЯ ФУНКЦИЯ
+function toggleChat() {
+    gameState.isChatCollapsed = !gameState.isChatCollapsed;
+    elements.chatContainer.classList.toggle('chat-collapsed', gameState.isChatCollapsed);
+    
+    // Меняем иконку
+    if (gameState.isChatCollapsed) {
+        elements.toggleChat.textContent = '+';
+    } else {
+        elements.toggleChat.textContent = '−';
+    }
+    
+    updateActivity();
+}
+
 // Обновление времени активности
 function updateActivity() {
     gameState.lastActivity = Date.now();
@@ -166,7 +180,7 @@ function updateActivity() {
 // Проверка активности
 function checkActivity() {
     const now = Date.now();
-    if (now - gameState.lastActivity > 120000) { // 2 минуты
+    if (now - gameState.lastActivity > 120000) {
         if (gameState.currentPlayer) {
             leaveGame();
         }
@@ -187,13 +201,11 @@ async function handleLogin() {
         return;
     }
     
-    // Проверка на модератора
     if (username === 'iammoderator') {
         await joinAsModerator();
         return;
     }
     
-    // Проверка доступности имени
     const { data: existingPlayer, error } = await supabase
         .from('players')
         .select('id, username, last_active')
@@ -202,7 +214,6 @@ async function handleLogin() {
         .single();
     
     if (existingPlayer && !error) {
-        // Проверяем, не устарела ли запись (более 2 минут)
         const lastActive = new Date(existingPlayer.last_active);
         const now = new Date();
         const diffMinutes = (now - lastActive) / (1000 * 60);
@@ -211,7 +222,6 @@ async function handleLogin() {
             showError('Это имя уже занято');
             return;
         } else {
-            // Помечаем старого игрока как неактивного
             await supabase
                 .from('players')
                 .update({ is_active: false })
@@ -219,14 +229,12 @@ async function handleLogin() {
         }
     }
     
-    // Создание нового игрока
     await joinAsPlayer(username);
 }
 
 // Вход как игрок
 async function joinAsPlayer(username) {
     try {
-        // Сначала выполняем очистку неактивных игроков
         await performAutoCleanup();
         
         const { data: newPlayer, error } = await supabase
@@ -250,7 +258,6 @@ async function joinAsPlayer(username) {
         
         if (error) throw error;
         
-        // Создание объекта игрока
         gameState.currentPlayer = {
             id: generatePlayerId(),
             username: username,
@@ -309,7 +316,6 @@ async function joinAsModerator() {
 // Получение доступной комнаты
 async function getAvailableRoom() {
     try {
-        // Получаем количество игроков в каждой комнате
         const { data: roomCounts, error } = await supabase
             .from('players')
             .select('room_id')
@@ -318,25 +324,22 @@ async function getAvailableRoom() {
         
         if (error) throw error;
         
-        // Считаем игроков по комнатам
         const roomPlayers = {};
         roomCounts.forEach(player => {
             roomPlayers[player.room_id] = (roomPlayers[player.room_id] || 0) + 1;
         });
         
-        // Ищем комнату с менее чем 12 игроками
         for (let roomId = 1; roomId <= 10; roomId++) {
             if (!roomPlayers[roomId] || roomPlayers[roomId] < 12) {
                 return roomId;
             }
         }
         
-        // Если все комнаты заполнены, создаем новую
         return (Math.max(...Object.keys(roomPlayers).map(Number)) || 0) + 1;
         
     } catch (error) {
         console.error('Error getting available room:', error);
-        return 1; // Возвращаем комнату по умолчанию
+        return 1;
     }
 }
 
@@ -378,14 +381,12 @@ function switchToGameScreen() {
 
 // Запуск синхронизации игры
 function startGameSync() {
-    // Загрузка初始ного состояния
     loadGameState();
     loadChatMessages();
     
-    // Запуск периодической синхронизации
-    setInterval(syncGameState, 2000); // Каждые 2 секунды
-    setInterval(cleanupInactivePlayers, 10000); // Каждые 10 секунд
-    setInterval(loadChatMessages, 3000); // Загрузка чата каждые 3 секунды
+    setInterval(syncGameState, 2000);
+    setInterval(cleanupInactivePlayers, 10000);
+    setInterval(loadChatMessages, 3000);
 }
 
 // Загрузка состояния игры
@@ -398,14 +399,12 @@ async function loadGameState() {
             .select('*')
             .eq('room_id', gameState.room.id)
             .eq('is_active', true)
-            .gt('last_active', new Date(Date.now() - 120000).toISOString()); // Активны в последние 2 минуты
+            .gt('last_active', new Date(Date.now() - 120000).toISOString());
         
         if (error) throw error;
         
-        // Временное хранилище для новых игроков
         const newPlayers = {};
         
-        // Обновление состояния игроков
         players.forEach(player => {
             if (player.id !== gameState.currentPlayer?.dbId) {
                 const playerId = 'db_' + player.id;
@@ -424,14 +423,12 @@ async function loadGameState() {
                     dbId: player.id
                 };
                 
-                // Проверяем, новый ли это игрок
                 if (!gameState.players[playerId]) {
                     addChatMessage(`${player.username} присоединился к игре`, false, true);
                 }
             }
         });
         
-        // Сохраняем текущего игрока
         if (gameState.currentPlayer) {
             newPlayers[gameState.currentPlayer.id] = gameState.currentPlayer;
         }
@@ -451,7 +448,6 @@ async function syncGameState() {
     if (!gameState.currentPlayer || !gameState.currentPlayer.dbId) return;
     
     try {
-        // Обновление текущего игрока в базе данных
         await supabase
             .from('players')
             .update({
@@ -488,7 +484,6 @@ async function cleanupInactivePlayers() {
                 .update({ is_active: false })
                 .eq('id', player.id);
             
-            // Удаление из локального состояния
             const playerId = 'db_' + player.id;
             if (gameState.players[playerId]) {
                 addChatMessage(`${player.username} вышел из игры (неактивность)`, false, true);
@@ -508,12 +503,10 @@ async function cleanupInactivePlayers() {
 function initJoystick() {
     let startX, startY;
     
-    // События касания
     joystick.base.addEventListener('touchstart', handleTouchStart, { passive: false });
     joystick.base.addEventListener('touchmove', handleTouchMove, { passive: false });
     joystick.base.addEventListener('touchend', handleTouchEnd);
     
-    // События мыши
     joystick.base.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
@@ -567,7 +560,6 @@ function initJoystick() {
         let deltaX = clientX - baseCenterX;
         let deltaY = clientY - baseCenterY;
         
-        // Ограничение радиуса джойстика
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const maxDistance = joystick.baseRect.width / 2;
         
@@ -576,10 +568,8 @@ function initJoystick() {
             deltaY = (deltaY / distance) * maxDistance;
         }
         
-        // Обновление позиции ручки
         joystick.handle.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
         
-        // Нормализация направления
         joystick.direction.x = deltaX / maxDistance;
         joystick.direction.y = deltaY / maxDistance;
         
@@ -601,7 +591,6 @@ function activateBoost() {
     gameState.lastBoostTime = now;
     gameState.isBoosting = true;
     
-    // Визуальная обратная связь
     elements.boostButton.classList.add('boost-active');
     elements.boostButton.disabled = true;
     
@@ -626,7 +615,6 @@ function performAttack() {
         elements.attackButton.classList.remove('attack-animation');
     }, 600);
     
-    // Проверка столкновений с другими игроками
     const attackRadius = 60;
     let hitPlayer = null;
     
@@ -644,7 +632,6 @@ function performAttack() {
     });
     
     if (hitPlayer) {
-        // Нанесение урона
         hitPlayer.health -= 10;
         
         if (hitPlayer.health <= 0) {
@@ -667,10 +654,7 @@ function performAttack() {
             );
         }
         
-        // Обновление UI
         updatePlayerUI();
-        
-        // Синхронизация с базой данных
         syncPlayerHit(hitPlayer);
     }
     
@@ -700,7 +684,6 @@ async function sendChatMessage() {
     if (!message || !gameState.currentPlayer) return;
     
     try {
-        // Сохранение в базе данных
         const { error } = await supabase
             .from('chat_messages')
             .insert([
@@ -709,13 +692,12 @@ async function sendChatMessage() {
                     message: message,
                     room_id: gameState.room.id,
                     is_moderator: gameState.currentPlayer.isModerator,
-                    expires_at: new Date(Date.now() + 60000).toISOString() // 1 минута
+                    expires_at: new Date(Date.now() + 60000).toISOString()
                 }
             ]);
         
         if (error) throw error;
         
-        // Добавление в локальный чат
         addChatMessage(
             `${gameState.currentPlayer.username}: ${message}`,
             gameState.currentPlayer.isModerator
@@ -731,7 +713,7 @@ async function sendChatMessage() {
 
 // Загрузка сообщений чата
 async function loadChatMessages() {
-    if (!gameState.room) return;
+    if (!gameState.room || gameState.isChatCollapsed) return;
     
     try {
         const { data: messages, error } = await supabase
@@ -744,14 +726,13 @@ async function loadChatMessages() {
         
         if (error) throw error;
         
-        // Очищаем только если есть новые сообщения
         if (messages.length > 0) {
             elements.chatMessages.innerHTML = '';
             messages.forEach(msg => {
                 addChatMessage(
                     `${msg.username}: ${msg.message}`,
                     msg.is_moderator,
-                    false, // Не анимировать при загрузке
+                    false,
                     false
                 );
             });
@@ -764,6 +745,8 @@ async function loadChatMessages() {
 
 // Добавление сообщения в чат
 function addChatMessage(message, isModerator = false, isSystem = false, animate = true) {
+    if (gameState.isChatCollapsed) return;
+    
     const messageElement = document.createElement('div');
     messageElement.classList.add('chat-message');
     
@@ -787,10 +770,8 @@ function addChatMessage(message, isModerator = false, isSystem = false, animate 
     
     elements.chatMessages.appendChild(messageElement);
     
-    // Автопрокрутка к последнему сообщению
     elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
     
-    // Ограничение количества сообщений
     const messages = elements.chatMessages.children;
     if (messages.length > 100) {
         messages[0].remove();
@@ -821,13 +802,11 @@ async function deleteRoom() {
     if (!gameState.isModerator) return;
     
     try {
-        // Помечаем всех игроков в комнате как неактивных
         await supabase
             .from('players')
             .update({ is_active: false })
             .eq('room_id', gameState.room.id);
         
-        // Очищаем чат комнаты
         await supabase
             .from('chat_messages')
             .delete()
@@ -856,7 +835,6 @@ async function switchRoom() {
         gameState.room.id = newRoomId;
         gameState.currentPlayer.roomId = newRoomId;
         
-        // Обновление в базе данных
         if (gameState.currentPlayer.dbId) {
             await supabase
                 .from('players')
@@ -864,7 +842,6 @@ async function switchRoom() {
                 .eq('id', gameState.currentPlayer.dbId);
         }
         
-        // Очистка текущих игроков
         gameState.players = { [gameState.currentPlayer.id]: gameState.currentPlayer };
         
         addChatMessage(`Модератор перешел в комнату ${newRoomId}`, true);
@@ -912,7 +889,6 @@ async function kickPlayer(player) {
     if (!gameState.isModerator) return;
     
     try {
-        // Помечаем игрока как неактивного
         if (player.dbId) {
             await supabase
                 .from('players')
@@ -920,7 +896,6 @@ async function kickPlayer(player) {
                 .eq('id', player.dbId);
         }
         
-        // Удаляем из локального состояния
         delete gameState.players[player.id];
         
         addChatMessage(`Модератор кикнул игрока ${player.username}`, true);
@@ -956,19 +931,12 @@ async function leaveGame() {
     }
 }
 
-// Переключение видимости чата
-function toggleChat() {
-    elements.chatContainer.classList.toggle('chat-collapsed');
-    elements.toggleChat.textContent = elements.chatContainer.classList.contains('chat-collapsed') ? '+' : '−';
-}
-
 // Обновление информации о комнате
 function updateRoomInfo() {
     elements.roomNumber.textContent = gameState.room ? gameState.room.id : '1';
     const playerCount = Object.keys(gameState.players).length;
     elements.playerCount.textContent = playerCount;
     
-    // Показываем/скрываем список игроков
     if (playerCount > 1) {
         elements.playerList.classList.remove('hidden');
     } else {
@@ -1004,7 +972,6 @@ function updatePlayerUI() {
     elements.healthFill.style.width = `${gameState.currentPlayer.health}%`;
     elements.scoreElement.textContent = `Очки: ${gameState.currentPlayer.score}`;
     
-    // Изменение цвета health bar в зависимости от здоровья
     if (gameState.currentPlayer.health < 30) {
         elements.healthFill.style.background = 'var(--health-red)';
     } else if (gameState.currentPlayer.health < 70) {
@@ -1016,17 +983,14 @@ function updatePlayerUI() {
 
 // Игровой цикл
 function gameLoop() {
-    // Очистка холста
     elements.ctx.fillStyle = '#000';
     elements.ctx.fillRect(0, 0, elements.gameCanvas.width, elements.gameCanvas.height);
     
-    // Обновление позиции текущего игрока
     if (gameState.currentPlayer && joystick.active) {
         const speed = gameState.isBoosting ? 8 : 4;
         gameState.currentPlayer.x += joystick.direction.x * speed;
         gameState.currentPlayer.y += joystick.direction.y * speed;
         
-        // Ограничение границ
         const player = gameState.currentPlayer;
         if (player.x < player.size) {
             player.x = player.size;
@@ -1040,11 +1004,9 @@ function gameLoop() {
             player.y = elements.gameCanvas.height - player.size;
         }
         
-        // Проверка столкновений
         checkCollisions(gameState.currentPlayer);
     }
     
-    // Отрисовка игроков
     Object.values(gameState.players).forEach(player => {
         drawPlayer(player);
     });
@@ -1056,13 +1018,11 @@ function gameLoop() {
 function drawPlayer(player) {
     const { x, y, color, username, size, health, isModerator } = player;
     
-    // Отрисовка кружка игрока
     elements.ctx.beginPath();
     elements.ctx.arc(x, y, size, 0, Math.PI * 2);
     elements.ctx.fillStyle = color;
     elements.ctx.fill();
     
-    // Эффект ускорения
     if (player.isBoosting) {
         elements.ctx.beginPath();
         elements.ctx.arc(x, y, size + 8, 0, Math.PI * 2);
@@ -1071,7 +1031,6 @@ function drawPlayer(player) {
         elements.ctx.stroke();
     }
     
-    // Обводка для модератора
     if (isModerator) {
         elements.ctx.beginPath();
         elements.ctx.arc(x, y, size + 2, 0, Math.PI * 2);
@@ -1080,13 +1039,11 @@ function drawPlayer(player) {
         elements.ctx.stroke();
     }
     
-    // Отображение ника
     elements.ctx.font = '14px Roboto';
     elements.ctx.fillStyle = '#fff';
     elements.ctx.textAlign = 'center';
     elements.ctx.textBaseline = 'bottom';
     
-    // Тень для текста
     elements.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
     elements.ctx.shadowBlur = 4;
     elements.ctx.shadowOffsetX = 2;
@@ -1094,13 +1051,11 @@ function drawPlayer(player) {
     
     elements.ctx.fillText(username, x, y - size - 5);
     
-    // Сброс тени
     elements.ctx.shadowColor = 'transparent';
     elements.ctx.shadowBlur = 0;
     elements.ctx.shadowOffsetX = 0;
     elements.ctx.shadowOffsetY = 0;
     
-    // Отображение здоровья (если не модератор)
     if (!isModerator && health < 100) {
         elements.ctx.font = '12px Roboto';
         elements.ctx.fillStyle = '#ff4757';
@@ -1122,7 +1077,6 @@ function checkCollisions(player) {
         const minDistance = player.size + otherPlayer.size;
         
         if (distance < minDistance) {
-            // Отталкивание
             const angle = Math.atan2(otherPlayer.y - player.y, otherPlayer.x - player.x);
             const force = 6;
             
@@ -1131,7 +1085,6 @@ function checkCollisions(player) {
             otherPlayer.x += Math.cos(angle) * force;
             otherPlayer.y += Math.sin(angle) * force;
             
-            // Ограничение границ после отталкивания
             [player, otherPlayer].forEach(p => {
                 if (p.x < p.size) p.x = p.size;
                 if (p.x > elements.gameCanvas.width - p.size) p.x = elements.gameCanvas.width - p.size;
